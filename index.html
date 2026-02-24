@@ -109,55 +109,54 @@
     tg.expand();
 
     async function initApp() {
-        const today = new Date().toDateString();
-        let uId = "";
-        let startParam = "";
+    const today = new Date().toDateString();
+    let uId = "";
+    let startParam = "";
 
-        // ১. আইডি এবং রেফার প্যারামিটার পাওয়ার লুপ
-        for (let i = 0; i < 10; i++) {
-            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
-            startParam = tg.initDataUnsafe?.start_param || "";
+    // টেলিগ্রাম থেকে ডাটা পাওয়ার জন্য সর্বোচ্চ ১৫ সেকেন্ড অপেক্ষা করবে
+    for (let i = 0; i < 30; i++) {
+        uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
+        const urlParams = new URLSearchParams(window.location.search);
+        startParam = tg.initDataUnsafe?.start_param || urlParams.get('startapp') || "";
+        
+        if (uId && startParam) break; // আইডি এবং রেফারেল দুটোই পেলে লুপ থামাবে
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (!uId) return;
+
+    const uRef = db.ref('users/' + uId);
+    const snapshot = await uRef.once('value');
+
+    if (!snapshot.exists()) {
+        // এই লজিকটি নিশ্চিত করবে যে রেফার আইডি থাকলেই কেবল বোনাস যাবে
+        const finalReferrer = (startParam && startParam !== uId) ? String(startParam) : "none";
+
+        await uRef.set({
+            balance: 0,
+            referrals: 0,
+            adsWatched: 0,
+            last_reset_day: today,
+            referredBy: finalReferrer
+        });
+
+        if (finalReferrer !== "none") {
+            const inviterRef = db.ref('users/' + finalReferrer);
+            await inviterRef.transaction((d) => {
+                if (d) {
+                    d.balance = (Number(d.balance) || 0) + 40;
+                    d.referrals = (Number(d.referrals) || 0) + 1;
+                }
+                return d;
+            });
             
-            if (!startParam) {
-                const urlParams = new URLSearchParams(window.location.search);
-                startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
-            }
-            if (uId) break; 
-            await new Promise(r => setTimeout(r, 500));
+            // রেফার মেসেজ পাঠানো
+            const botToken = "8740191296:AAELPLQaCwWxtQeZFvMVeNdM3Gvnt_zYFK8";
+            const msg = encodeURIComponent(`🎉 আপনার রেফারে নতুন ইউজার জয়েন করেছে!\n➕ রেফার বোনাস: +৪০ টাকা`);
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${finalReferrer}&text=${msg}`);
         }
-
-        if (!uId) return;
-
-        const uRef = db.ref('users/' + uId);
-        const snapshot = await uRef.once('value');
-
-        // ২. নতুন ইউজার রেজিস্টার
-        if (!snapshot.exists()) {
-            const newUser = {
-                balance: 0,
-                referrals: 0,
-                adsWatched: 0,
-                last_reset_day: today,
-                referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
-            };
-            await uRef.set(newUser);
-
-            // ৩. রেফারারকে বোনাস এবং মেসেজ পাঠানো
-            if (startParam && String(startParam) !== uId && startParam !== "none") {
-                const inviterRef = db.ref('users/' + startParam);
-                await inviterRef.transaction((currentData) => {
-                    if (currentData) {
-                        currentData.balance = (Number(currentData.balance) || 0) + 40;
-                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
-                    }
-                    return currentData;
-                });
-
-                const botToken = "8740191296:AAELPLQaCwWxtQeZFvMVeNdM3Gvnt_zYFK8";
-                const message = `🎉 আপনার রেফারে নতুন ইউজার জয়েন করেছে!\n➕ রেফার বোনাস: +৪০ টাকা`;
-                fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${startParam}&text=${encodeURIComponent(message)}`);
-            }
-        }
+    }
+    }
 
         // ৪. UI আপডেট লিসেনার (এটি ফাংশনের ভেতরেই থাকবে)
         uRef.on('value', (s) => {
