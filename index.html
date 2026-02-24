@@ -110,55 +110,48 @@
     tg.expand();
 
     async function initApp() {
-        // ১. প্রতিবার অ্যাপ খোলার সময় লোকাল ডাটা ক্লিয়ার করে দেওয়া (গোপন ট্রিক)
-        // এটি করলে ব্রাউজার আগের ইউজারকে ভুলে যাবে
-        window.localStorage.clear();
-        window.sessionStorage.clear();
-
-        const today = new Date().toDateString();
-        
-        // ২. ইউজার আইডি পেতে রিট্রাই লুপ
-        let uId = null;
-        for (let i = 0; i < 15; i++) {
-            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-            if (uId) break;
-            await new Promise(r => setTimeout(r, 400));
-        }
-
-        if (!uId) {
-            document.getElementById('u-name').innerText = "টেলিগ্রাম আইডি পাওয়া যায়নি!";
-            return;
-        }
-
-        // ৩. রেফারেল আইডি সরাসরি ইউআরএল এবং টেলিগ্রাম থেকে টেনে আনা
+    tg.ready();
+    const today = new Date().toDateString();
+    
+    // ১. রেফার আইডি পাওয়ার জন্য ৩ স্তরের চেক
+    let startParam = tg.initDataUnsafe?.start_param;
+    if (!startParam) {
         const urlParams = new URLSearchParams(window.location.search);
-        let startParam = tg.initDataUnsafe?.start_param || urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+    }
 
-        const uRef = db.ref('users/' + uId);
-        const snapshot = await uRef.once('value');
+    // স্ক্রিনে মেসেজ দেখাবে আইডি পেয়েছে কি না (টেস্ট করার জন্য)
+    if (startParam) {
+        tg.showAlert("রেফার আইডি ধরা পড়েছে: " + startParam);
+    } else {
+        tg.showAlert("কোনো রেফার আইডি পাওয়া যায়নি!");
+    }
 
-        // ৪. যদি ইউজার নতুন হয় (বা ডাটাবেজ থেকে ডিলিট করা হয়)
-        if (!snapshot.exists()) {
-            await uRef.set({
-                balance: 0,
-                referrals: 0,
-                adsWatched: 0,
-                last_reset_day: today,
-                referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
+    const uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+    if (!uId) return;
+
+    const uRef = db.ref('users/' + uId);
+    const snapshot = await uRef.once('value');
+
+    if (!snapshot.exists()) {
+        await uRef.set({
+            balance: 0,
+            referrals: 0,
+            referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
+        });
+
+        if (startParam && String(startParam) !== uId) {
+            const inviterRef = db.ref('users/' + startParam);
+            inviterRef.transaction((d) => {
+                if (d) {
+                    d.balance = (Number(d.balance) || 0) + 40;
+                    d.referrals = (Number(d.referrals) || 0) + 1;
+                }
+                return d;
             });
-
-            // ৫. ইনভাইটারকে সাথে সাথে বোনাস দেওয়া
-            if (startParam && String(startParam) !== uId) {
-                const inviterRef = db.ref('users/' + startParam);
-                await inviterRef.transaction((d) => {
-                    if (d) {
-                        d.balance = (Number(d.balance) || 0) + 40;
-                        d.referrals = (Number(d.referrals) || 0) + 1;
-                    }
-                    return d;
-                });
-            }
         }
+    }
+    }
 
         // ৬. রিয়েল টাইম ডাটা শো করা
         uRef.on('value', (s) => {
