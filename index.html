@@ -116,58 +116,65 @@
     async function initApp() {
     const today = new Date().toDateString();
     
-    // ১. রেফারেল আইডি ধরার জন্য সবচেয়ে শক্তিশালী পদ্ধতি
-    let startParam = "";
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // পদ্ধতি ১: টেলিগ্রামের নিজস্ব মেথড
-    startParam = tg.initDataUnsafe?.start_param;
-    
-    // পদ্ধতি ২: ইউআরএল প্যারামিটার থেকে সরাসরি (যদি টেলিগ্রাম মিস করে)
+    // ১. রেফারেল আইডি ধরার পদ্ধতি
+    let startParam = tg.initDataUnsafe?.start_param;
     if (!startParam) {
+        const urlParams = new URLSearchParams(window.location.search);
         startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
     }
 
-    // ২. ডাটাবেজ চেক
     const snapshot = await uRef.once('value');
 
     if (!snapshot.exists()) {
-        // নতুন ইউজার রেজিস্টার হচ্ছে
+        // নতুন ইউজার রেজিস্টার
         const newUser = {
             balance: 0,
             referrals: 0,
             adsWatched: 0,
             last_reset_day: today,
-            referredBy: (startParam && startParam !== uId) ? String(startParam) : "none"
+            referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
         };
         await uRef.set(newUser);
 
-        // ৩. রেফার বোনাস দেওয়া (এখানেই আসল কাজ)
-        if (startParam && startParam !== uId && startParam !== "none") {
+        // ২. রেফার বোনাস ট্রানজ্যাকশন
+        if (startParam && String(startParam) !== uId) {
             const inviterRef = db.ref('users/' + startParam);
-            await inviterRef.transaction((currentData) => {
-                if (currentData) {
-                    currentData.balance = (Number(currentData.balance) || 0) + 40;
-                    currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+            await inviterRef.transaction((d) => {
+                if (d) {
+                    d.balance = (Number(d.balance) || 0) + 40;
+                    d.referrals = (Number(d.referrals) || 0) + 1;
                 }
-                return currentData;
+                return d;
             });
         }
     }
-    }
 
-        // ৪. রিয়েল টাইম UI আপডেট
-        uRef.on('value', (s) => {
-            const d = s.val() || {};
-            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
-            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
-            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
-            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
-        });
-    }
+    // ৩. রিয়েল টাইম UI আপডেট (এটার অভাবেই লিঙ্ক আসছিল না)
+    uRef.on('value', (s) => {
+        const d = s.val() || {};
+        if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
+        if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+        if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+        
+        // রেফার লিঙ্ক জেনারেশন
+        if(document.getElementById('ref-url')) {
+            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
+        }
+    });
+}
 
-    initApp();
+// ৪. পেজ নেভিগেশন ফাংশন (এটার অভাবেই পেজ চেঞ্জ হচ্ছিল না)
+function nav(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+    const target = document.getElementById(id);
+    if(target) target.classList.add('active-page');
+    
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if(el) el.classList.add('active');
+}
+
+// অ্যাপ রান করা
+initApp();
 
     // পেজ পরিবর্তনের জন্য nav ফাংশন
     function nav(id, el) {
