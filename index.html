@@ -100,125 +100,101 @@
     </nav>
 
 <script>
-    // ১. কনফিগ ও অ্যাড লিংক
     const firebaseConfig = { 
         apiKey: "AIzaSyCO7VEV5kJCQT11Cn0RYvgyBh8JypFVRgs", 
         databaseURL: "https://fojik-video-default-rtdb.firebaseio.com", 
         projectId: "fojik-video" 
     };
 
-    const adLinks = [
-        'https://www.effectivegatecpm.com/ryk3u53hv9?key=e22b7e110ad6415a286ab7d67eaaab01',
-        'https://www.effectivegatecpm.com/kgcr5va9hr?key=d05d5b6553b85edd5d134c8c72222e5c'
-    ];
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const tg = window.Telegram.WebApp;
-    tg.ready(); tg.expand();
+    tg.ready();
+    tg.expand();
 
-    const user = tg.initDataUnsafe?.user;
-    const uId = user?.id ? String(user.id) : "guest_user";
-    const uRef = db.ref('users/' + uId);
-    let bal = 0;
-
-    // ২. অ্যাপ ইনিশিয়ালাইজেশন
+    // ইউজারের ডাটা লোড করার আগে কিছুক্ষণ অপেক্ষা করা যাতে টেলিগ্রাম আইডি পাওয়া যায়
     async function initApp() {
         const today = new Date().toDateString();
-        let startParam = tg.initDataUnsafe?.start_param || "";
+        let uId = "";
+        let startParam = "";
 
+        // ১. আইডি এবং রেফারেল প্যারামিটার পাওয়ার জন্য ৫ সেকেন্ডের লুপ
+        for (let i = 0; i < 10; i++) {
+            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
+            startParam = tg.initDataUnsafe?.start_param || "";
+            
+            if (!startParam) {
+                const urlParams = new URLSearchParams(window.location.search);
+                startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
+            }
+            
+            if (uId) break; // আইডি পেয়ে গেলে লুপ বন্ধ
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        if (!uId) {
+            console.log("User ID not found!");
+            return;
+        }
+
+        const uRef = db.ref('users/' + uId);
         const snapshot = await uRef.once('value');
-        if (!snapshot.exists()) {
-            await uRef.set({
-                balance: 0, referrals: 0, adsWatched: 0,
-                last_reset_day: today,
-                referredBy: (startParam && startParam !== uId) ? startParam : "none",
-                completedTasks: {}
-            });
 
-            if (startParam && startParam !== uId) {
-                db.ref('users/' + startParam).transaction(d => {
-                    if(d) { d.balance = (d.balance || 0) + 40; d.referrals = (d.referrals || 0) + 1; }
-                    return d;
+        if (!snapshot.exists()) {
+            // ২. নতুন ইউজার এন্ট্রি (রেফারেল আইডি সহ)
+            const newUser = {
+                balance: 0,
+                referrals: 0,
+                adsWatched: 0,
+                last_reset_day: today,
+                referredBy: (startParam && startParam !== uId) ? String(startParam) : "none"
+            };
+            await uRef.set(newUser);
+
+            // ৩. ইনভাইটারকে টাকা দেওয়া (Transaction)
+            if (startParam && startParam !== uId && startParam !== "none") {
+                const inviterRef = db.ref('users/' + startParam);
+                await inviterRef.transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (Number(currentData.balance) || 0) + 40;
+                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                    }
+                    return currentData;
                 });
             }
         }
 
+        // ৪. রিয়েল টাইম UI আপডেট
         uRef.on('value', (s) => {
             const d = s.val() || {};
-            bal = d.balance || 0;
-            document.getElementById('u-balance').innerText = bal.toFixed(2);
-            document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
-            document.getElementById('u-name').innerText = user?.first_name || "User";
-            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
-            renderAds(d.completedTasks || {});
+            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
+            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
+            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
         });
     }
 
-    // ৩. অ্যাড রেন্ডার
-    function renderAds(completedTasks) {
-        const today = new Date().toDateString();
-        const adList = document.getElementById('ad-list');
-        if(!adList) return;
-        adList.innerHTML = ""; 
+    initApp();
 
-        for(let i=1; i<=6; i++) {
-            const btnId = `ad-${i}`;
-            const isDone = (completedTasks[btnId] === today);
-            adList.innerHTML += `
-            <div class="ad-card">
-                <div class="ad-title">Ad #${i} (10 TK)</div>
-                <button id="ad-btn-${i}" onclick="handleTask('${btnId}', '${adLinks[i%2]}', 10)" class="btn-verify" ${isDone ? 'disabled' : ''}>
-                    ${isDone ? 'Completed' : 'Watch Ad'}
-                </button>
-            </div>`;
-        }
-    }
-
-    // ৪. টাস্ক ও পেজ কন্ট্রোল
-    let isWatching = {};
-    function handleTask(btnId, link, amount) {
-        const today = new Date().toDateString();
-        if (isWatching[btnId]) {
-            uRef.update({ balance: bal + amount, [`completedTasks/${btnId}`]: today });
-            tg.showAlert("Reward added!");
-            isWatching[btnId] = false;
-        } else {
-            window.open(link, '_blank');
-            isWatching[btnId] = true;
-            tg.showAlert("বিজ্ঞাপনটি ১৫ সেকেন্ড দেখুন, তারপর আবার Verify বাটনে ক্লিক করুন।");
-        }
-    }
-
+    // পেজ পরিবর্তনের জন্য nav ফাংশন
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-        document.getElementById(id).classList.add('active-page');
+        const target = document.getElementById(id);
+        if(target) target.classList.add('active-page');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
+        if(el) el.classList.add('active');
     }
 
+    // কপি ফাংশন
     function copyRef() {
         const link = document.getElementById('ref-url').innerText;
         const el = document.createElement('textarea');
         el.value = link; document.body.appendChild(el);
         el.select(); document.execCommand('copy');
         document.body.removeChild(el);
-        tg.showAlert("Copied!");
+        tg.showAlert("লিঙ্ক কপি হয়েছে!");
     }
-
-    function shareRef() {
-        const link = document.getElementById('ref-url').innerText;
-        tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=Earn 40 TK per refer!`);
-    }
-
-    function submitWithdraw() {
-        const amt = parseFloat(document.getElementById('w-amount').value);
-        if(bal < 800 || amt < 800) return tg.showAlert("Minimum 800 TK required!");
-        uRef.update({ balance: bal - amt }).then(() => tg.showAlert("Request Submitted!"));
-    }
-
-    initApp();
 </script>
 </body>
 </html>
