@@ -114,55 +114,47 @@
 
     // ইউজারের ডাটা লোড করার আগে কিছুক্ষণ অপেক্ষা করা যাতে টেলিগ্রাম আইডি পাওয়া যায়
     async function initApp() {
-        const today = new Date().toDateString();
-        let uId = "";
-        let startParam = "";
+    const today = new Date().toDateString();
+    
+    // ১. রেফারেল আইডি ধরার জন্য সবচেয়ে শক্তিশালী পদ্ধতি
+    let startParam = "";
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // পদ্ধতি ১: টেলিগ্রামের নিজস্ব মেথড
+    startParam = tg.initDataUnsafe?.start_param;
+    
+    // পদ্ধতি ২: ইউআরএল প্যারামিটার থেকে সরাসরি (যদি টেলিগ্রাম মিস করে)
+    if (!startParam) {
+        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
+    }
 
-        // ১. আইডি এবং রেফারেল প্যারামিটার পাওয়ার জন্য ৫ সেকেন্ডের লুপ
-        for (let i = 0; i < 10; i++) {
-            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
-            startParam = tg.initDataUnsafe?.start_param || "";
-            
-            if (!startParam) {
-                const urlParams = new URLSearchParams(window.location.search);
-                startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
-            }
-            
-            if (uId) break; // আইডি পেয়ে গেলে লুপ বন্ধ
-            await new Promise(r => setTimeout(r, 500));
+    // ২. ডাটাবেজ চেক
+    const snapshot = await uRef.once('value');
+
+    if (!snapshot.exists()) {
+        // নতুন ইউজার রেজিস্টার হচ্ছে
+        const newUser = {
+            balance: 0,
+            referrals: 0,
+            adsWatched: 0,
+            last_reset_day: today,
+            referredBy: (startParam && startParam !== uId) ? String(startParam) : "none"
+        };
+        await uRef.set(newUser);
+
+        // ৩. রেফার বোনাস দেওয়া (এখানেই আসল কাজ)
+        if (startParam && startParam !== uId && startParam !== "none") {
+            const inviterRef = db.ref('users/' + startParam);
+            await inviterRef.transaction((currentData) => {
+                if (currentData) {
+                    currentData.balance = (Number(currentData.balance) || 0) + 40;
+                    currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                }
+                return currentData;
+            });
         }
-
-        if (!uId) {
-            console.log("User ID not found!");
-            return;
-        }
-
-        const uRef = db.ref('users/' + uId);
-        const snapshot = await uRef.once('value');
-
-        if (!snapshot.exists()) {
-            // ২. নতুন ইউজার এন্ট্রি (রেফারেল আইডি সহ)
-            const newUser = {
-                balance: 0,
-                referrals: 0,
-                adsWatched: 0,
-                last_reset_day: today,
-                referredBy: (startParam && startParam !== uId) ? String(startParam) : "none"
-            };
-            await uRef.set(newUser);
-
-            // ৩. ইনভাইটারকে টাকা দেওয়া (Transaction)
-            if (startParam && startParam !== uId && startParam !== "none") {
-                const inviterRef = db.ref('users/' + startParam);
-                await inviterRef.transaction((currentData) => {
-                    if (currentData) {
-                        currentData.balance = (Number(currentData.balance) || 0) + 40;
-                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
-                    }
-                    return currentData;
-                });
-            }
-        }
+    }
+    }
 
         // ৪. রিয়েল টাইম UI আপডেট
         uRef.on('value', (s) => {
