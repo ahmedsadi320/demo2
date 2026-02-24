@@ -145,18 +145,26 @@
             };
             await uRef.set(newUser);
 
-            // ৩. রেফারারকে বোনাস দেওয়া
-            if (startParam && String(startParam) !== uId && startParam !== "none") {
-                const inviterRef = db.ref('users/' + startParam);
-                await inviterRef.transaction((currentData) => {
-                    if (currentData) {
-                        currentData.balance = (Number(currentData.balance) || 0) + 40;
-                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
-                    }
-                    return currentData;
-                });
-            }
+            // ৩. রেফারারকে বোনাস দেওয়া এবং মেসেজ পাঠানো
+if (startParam && String(startParam) !== uId && startParam !== "none") {
+    const inviterRef = db.ref('users/' + startParam);
+    await inviterRef.transaction((currentData) => {
+        if (currentData) {
+            currentData.balance = (Number(currentData.balance) || 0) + 40;
+            currentData.referrals = (Number(currentData.referrals) || 0) + 1;
         }
+        return currentData;
+    });
+
+    // --- টেলিগ্রামে মেসেজ পাঠানোর কোড (নতুন) ---
+    const botToken = "8740191296:AAELPLQaCwWxtQeZFvMVeNdM3Gvnt_zYFK8"; // আপনার বটের টোকেন এখানে দিন
+    const message = `🎉 আপনার রেফারে নতুন ইউজার জয়েন করেছে!\n➕ রেফার বোনাস: +৪০ টাকা`;
+    
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${startParam}&text=${encodeURIComponent(message)}`)
+    .then(response => console.log("Message Sent"))
+    .catch(error => console.error("Error sending message:", error));
+    // -------------------------------------------
+}
 
         // ৪. UI আপডেট (ব্যালেন্স, নাম এবং লিঙ্ক)
         uRef.on('value', (s) => {
