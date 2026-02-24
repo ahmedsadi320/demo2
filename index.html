@@ -113,28 +113,25 @@
         let uId = "";
         let startParam = "";
 
-        // ১. আইডি এবং রেফার প্যারামিটার পাওয়ার জন্য ৫ সেকেন্ডের ওয়েট লুপ
-        // এটিই আপনার সমস্যার আসল সমাধান
+        // ১. আইডি এবং রেফার প্যারামিটার পাওয়ার লুপ
         for (let i = 0; i < 10; i++) {
             uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
             startParam = tg.initDataUnsafe?.start_param || "";
             
-            // যদি টেলিগ্রাম মিস করে তবে URL থেকে খোঁজা
             if (!startParam) {
                 const urlParams = new URLSearchParams(window.location.search);
                 startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
             }
-            
             if (uId) break; 
             await new Promise(r => setTimeout(r, 500));
         }
 
-        if (!uId) return; // আইডি না থাকলে কোড এখানেই থেমে যাবে
+        if (!uId) return;
 
         const uRef = db.ref('users/' + uId);
         const snapshot = await uRef.once('value');
 
-        // ২. নতুন ইউজার হলে রেফারেল চেক
+        // ২. নতুন ইউজার রেজিস্টার
         if (!snapshot.exists()) {
             const newUser = {
                 balance: 0,
@@ -145,47 +142,43 @@
             };
             await uRef.set(newUser);
 
-            // ৩. রেফারারকে বোনাস দেওয়া এবং মেসেজ পাঠানো
-if (startParam && String(startParam) !== uId && startParam !== "none") {
-    const inviterRef = db.ref('users/' + startParam);
-    await inviterRef.transaction((currentData) => {
-        if (currentData) {
-            currentData.balance = (Number(currentData.balance) || 0) + 40;
-            currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+            // ৩. রেফারারকে বোনাস এবং মেসেজ পাঠানো
+            if (startParam && String(startParam) !== uId && startParam !== "none") {
+                const inviterRef = db.ref('users/' + startParam);
+                await inviterRef.transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (Number(currentData.balance) || 0) + 40;
+                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                    }
+                    return currentData;
+                });
+
+                const botToken = "8740191296:AAELPLQaCwWxtQeZFvMVeNdM3Gvnt_zYFK8";
+                const message = `🎉 আপনার রেফারে নতুন ইউজার জয়েন করেছে!\n➕ রেফার বোনাস: +৪০ টাকা`;
+                fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${startParam}&text=${encodeURIComponent(message)}`);
+            }
         }
-        return currentData;
-    });
 
-    // --- টেলিগ্রামে মেসেজ পাঠানোর কোড (নতুন) ---
-    const botToken = "8740191296:AAELPLQaCwWxtQeZFvMVeNdM3Gvnt_zYFK8"; // আপনার বটের টোকেন এখানে দিন
-    const message = `🎉 আপনার রেফারে নতুন ইউজার জয়েন করেছে!\n➕ রেফার বোনাস: +৪০ টাকা`;
-    
-    fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${startParam}&text=${encodeURIComponent(message)}`)
-    .then(response => console.log("Message Sent"))
-    .catch(error => console.error("Error sending message:", error));
-    // -------------------------------------------
-}
-
-        // ৪. UI আপডেট (ব্যালেন্স, নাম এবং লিঙ্ক)
+        // ৪. UI আপডেট লিসেনার (এটি ফাংশনের ভেতরেই থাকবে)
         uRef.on('value', (s) => {
             const d = s.val() || {};
-            document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
-            document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
-            document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
-            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
+            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
+            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
+            if(document.getElementById('ref-url')) document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
         });
-    }
+    } // এখানে initApp ফাংশন শেষ
 
-    // ৫. পেজ পরিবর্তন ফাংশন
+    // ৫. পেজ পরিবর্তন ফাংশন (ফাংশনের বাইরে)
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-        document.getElementById(id).classList.add('active-page');
+        const target = document.getElementById(id);
+        if(target) target.classList.add('active-page');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
     }
 
-    // ৬. কপি ফাংশন
     function copyRef() {
         const link = document.getElementById('ref-url').innerText;
         const el = document.createElement('textarea');
@@ -195,6 +188,7 @@ if (startParam && String(startParam) !== uId && startParam !== "none") {
         tg.showAlert("লিঙ্ক কপি হয়েছে!");
     }
 
+    // অ্যাপ রান করা
     initApp();
 </script>
 </body>
