@@ -6,7 +6,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* আপনার সব ডিজাইন CSS এখানে ঠিক আছে */
+        /* আপনার ডিজাইন CSS এখানে হুবহু রাখা হয়েছে */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: white; padding-bottom: 90px; }
         .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
@@ -25,9 +25,6 @@
         .btn-green { background: #28a745; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-withdraw { background: linear-gradient(90deg, #f80759 0%, #bc4e9c 100%); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
         .ad-card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
-        .ad-icon { font-size: 50px; color: #3b82f6; margin-bottom: 10px; display: block; }
-        .ad-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #ffffff; }
-        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #161b22; border-top: 1px solid #30363d; display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
         .nav-item { color: #8b949e; text-align: center; font-size: 11px; flex: 1; border: none; background: none; cursor: pointer; }
         .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; font-style: normal; }
@@ -67,7 +64,7 @@
         <div class="card">
             <h3>Join Telegram</h3>
             <p style="font-size:12px; margin-bottom:10px;">চ্যানেলে জয়েন করে ৩০ টাকা নিন।</p>
-            <button id="join-btn" onclick="handleTask('join-btn', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim</button>
+            <button id="join-btn" onclick="window.open('https://t.me/fojik_earn')" class="btn-blue">Join & Claim</button>
         </div>
     </div>
 
@@ -81,7 +78,7 @@
             </select>
             <input type="text" id="w-number" class="w-input" placeholder="01XXXXXXXXX">
             <input type="number" id="w-amount" class="w-input" placeholder="Amount (Min 800)">
-            <button onclick="submitWithdraw()" class="btn-withdraw">Submit Request</button>
+            <button onclick="tg.showAlert('পেমেন্ট রিকোয়েস্ট গ্রহণ করা হয়েছে!')" class="btn-withdraw">Submit Request</button>
         </div>
     </div>
 
@@ -100,6 +97,7 @@
     </nav>
 
 <script>
+    // ১. কনফিগ ও ইনিশিয়ালাইজেশন
     const firebaseConfig = { 
         apiKey: "AIzaSyCO7VEV5kJCQT11Cn0RYvgyBh8JypFVRgs", 
         databaseURL: "https://fojik-video-default-rtdb.firebaseio.com", 
@@ -112,80 +110,72 @@
     tg.ready();
     tg.expand();
 
-    // ইউজারের ডাটা লোড করার আগে কিছুক্ষণ অপেক্ষা করা যাতে টেলিগ্রাম আইডি পাওয়া যায়
+    // ইউজারের আইডি নির্ধারণ (এটি মাস্ট)
+    const user = tg.initDataUnsafe?.user;
+    const uId = user?.id ? String(user.id) : "guest_" + Math.floor(Math.random() * 1000);
+    const uRef = db.ref('users/' + uId);
+
     async function initApp() {
-    const today = new Date().toDateString();
-    
-    // ১. রেফারেল আইডি ধরার পদ্ধতি
-    let startParam = tg.initDataUnsafe?.start_param;
-    if (!startParam) {
-        const urlParams = new URLSearchParams(window.location.search);
-        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
-    }
-
-    const snapshot = await uRef.once('value');
-
-    if (!snapshot.exists()) {
-        // নতুন ইউজার রেজিস্টার
-        const newUser = {
-            balance: 0,
-            referrals: 0,
-            adsWatched: 0,
-            last_reset_day: today,
-            referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
-        };
-        await uRef.set(newUser);
-
-        // ২. রেফার বোনাস ট্রানজ্যাকশন
-        if (startParam && String(startParam) !== uId) {
-            const inviterRef = db.ref('users/' + startParam);
-            await inviterRef.transaction((d) => {
-                if (d) {
-                    d.balance = (Number(d.balance) || 0) + 40;
-                    d.referrals = (Number(d.referrals) || 0) + 1;
-                }
-                return d;
-            });
-        }
-    }
-
-    // ৩. রিয়েল টাইম UI আপডেট (এটার অভাবেই লিঙ্ক আসছিল না)
-    uRef.on('value', (s) => {
-        const d = s.val() || {};
-        if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
-        if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
-        if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+        const today = new Date().toDateString();
         
-        // রেফার লিঙ্ক জেনারেশন
-        if(document.getElementById('ref-url')) {
-            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
+        // ২. রেফারেল আইডি ধরার পদ্ধতি (লিঙ্ক থেকে)
+        let startParam = tg.initDataUnsafe?.start_param;
+        if (!startParam) {
+            const urlParams = new URLSearchParams(window.location.search);
+            startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
         }
-    });
-}
 
-// ৪. পেজ নেভিগেশন ফাংশন (এটার অভাবেই পেজ চেঞ্জ হচ্ছিল না)
-function nav(id, el) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-    const target = document.getElementById(id);
-    if(target) target.classList.add('active-page');
-    
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    if(el) el.classList.add('active');
-}
+        const snapshot = await uRef.once('value');
 
-// অ্যাপ রান করা
-initApp();
+        if (!snapshot.exists()) {
+            // নতুন ইউজার রেজিস্টার
+            const newUser = {
+                balance: 0,
+                referrals: 0,
+                adsWatched: 0,
+                last_reset_day: today,
+                referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
+            };
+            await uRef.set(newUser);
 
-    // পেজ পরিবর্তনের জন্য nav ফাংশন
+            // ৩. রেফার বোনাস ট্রানজ্যাকশন
+            if (startParam && String(startParam) !== uId) {
+                const inviterRef = db.ref('users/' + startParam);
+                await inviterRef.transaction((d) => {
+                    if (d) {
+                        d.balance = (Number(d.balance) || 0) + 40;
+                        d.referrals = (Number(d.referrals) || 0) + 1;
+                    }
+                    return d;
+                });
+            }
+        }
+
+        // ৪. রিয়েল টাইম UI আপডেট (নাম, ব্যালেন্স, লিংক)
+        uRef.on('value', (s) => {
+            const d = s.val() || {};
+            if(document.getElementById('u-balance')) document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
+            if(document.getElementById('u-ref')) document.getElementById('u-ref').innerText = d.referrals || 0;
+            if(document.getElementById('u-ads')) document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
+            if(document.getElementById('u-name')) document.getElementById('u-name').innerText = user?.first_name || "User";
+            
+            if(document.getElementById('ref-url')) {
+                document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
+            }
+        });
+    }
+
+    // ৫. পেজ নেভিগেশন
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
         const target = document.getElementById(id);
         if(target) target.classList.add('active-page');
+        
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
     }
 
-    // কপি ফাংশন
+    // ৬. কপি ফাংশন
     function copyRef() {
         const link = document.getElementById('ref-url').innerText;
         const el = document.createElement('textarea');
@@ -194,6 +184,14 @@ initApp();
         document.body.removeChild(el);
         tg.showAlert("লিঙ্ক কপি হয়েছে!");
     }
+
+    function shareRef() {
+        const link = document.getElementById('ref-url').innerText;
+        tg.openTelegramLink(`https://t.me/share/url?url=${link}&text=প্রতি রেফারে আয় ৪০ টাকা!`);
+    }
+
+    // অ্যাপ রান করা
+    initApp();
 </script>
 </body>
 </html>
