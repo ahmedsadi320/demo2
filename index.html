@@ -96,6 +96,7 @@
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
 <script>
+    // আপনার কনফিগ একই থাকবে
     const firebaseConfig = { 
         apiKey: "AIzaSyCO7VEV5kJCQT11Cn0RYvgyBh8JypFVRgs", 
         databaseURL: "https://fojik-video-default-rtdb.firebaseio.com", 
@@ -108,40 +109,36 @@
     tg.ready();
     tg.expand();
 
-    // একদম ফ্রেশ ভাবে আইডি এবং রেফারেল চেক করার ফাংশন
     async function initApp() {
+        // ১. প্রতিবার অ্যাপ খোলার সময় লোকাল ডাটা ক্লিয়ার করে দেওয়া (গোপন ট্রিক)
+        // এটি করলে ব্রাউজার আগের ইউজারকে ভুলে যাবে
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+
         const today = new Date().toDateString();
         
-        // ১. আইডি নিশ্চিত করা (এটি ছাড়া কিছুই হবে না)
-        let uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-        
-        // যদি আইডি না পায়, তবে ৫ সেকেন্ড ওয়েট করবে (Retry)
-        if (!uId) {
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 500));
-                uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-                if (uId) break;
-            }
+        // ২. ইউজার আইডি পেতে রিট্রাই লুপ
+        let uId = null;
+        for (let i = 0; i < 15; i++) {
+            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+            if (uId) break;
+            await new Promise(r => setTimeout(r, 400));
         }
 
         if (!uId) {
-            document.getElementById('u-name').innerText = "ID Error! Restart Bot";
+            document.getElementById('u-name').innerText = "টেলিগ্রাম আইডি পাওয়া যায়নি!";
             return;
         }
 
+        // ৩. রেফারেল আইডি সরাসরি ইউআরএল এবং টেলিগ্রাম থেকে টেনে আনা
+        const urlParams = new URLSearchParams(window.location.search);
+        let startParam = tg.initDataUnsafe?.start_param || urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+
         const uRef = db.ref('users/' + uId);
-
-        // ২. রেফারেল আইডি ধরার মাস্টার লজিক (যা ওই তরমুজ বটে আছে)
-        let startParam = tg.initDataUnsafe?.start_param;
-        if (!startParam) {
-            const urlParams = new URLSearchParams(window.location.search);
-            startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
-        }
-
         const snapshot = await uRef.once('value');
 
+        // ৪. যদি ইউজার নতুন হয় (বা ডাটাবেজ থেকে ডিলিট করা হয়)
         if (!snapshot.exists()) {
-            // নতুন ইউজার ডাটাবেজে সেভ
             await uRef.set({
                 balance: 0,
                 referrals: 0,
@@ -150,7 +147,7 @@
                 referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
             });
 
-            // ৩. রেফারারকে টাকা দেওয়া (Transaction)
+            // ৫. ইনভাইটারকে সাথে সাথে বোনাস দেওয়া
             if (startParam && String(startParam) !== uId) {
                 const inviterRef = db.ref('users/' + startParam);
                 await inviterRef.transaction((d) => {
@@ -163,38 +160,24 @@
             }
         }
 
-        // ৪. রিয়েল টাইম আপডেট (UI Refresh)
+        // ৬. রিয়েল টাইম ডাটা শো করা
         uRef.on('value', (s) => {
             const d = s.val() || {};
             document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
             document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
             document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
         });
     }
 
-    // ৫. পেজ পরিবর্তন ফাংশন
+    // পেজ পরিবর্তনের জন্য ফাংশন
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-        const target = document.getElementById(id);
-        if(target) target.classList.add('active-page');
+        document.getElementById(id).classList.add('active-page');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
     }
 
-    // ৬. কপি ফাংশন
-    function copyRef() {
-        const link = document.getElementById('ref-url').innerText;
-        if(link.includes("Loading")) return tg.showAlert("লিঙ্ক এখনো তৈরি হয়নি!");
-        const el = document.createElement('textarea');
-        el.value = link; document.body.appendChild(el);
-        el.select(); document.execCommand('copy');
-        document.body.removeChild(el);
-        tg.showAlert("রেফার লিঙ্ক কপি হয়েছে!");
-    }
-
-    // অ্যাপ স্টার্ট
     initApp();
 </script>
 </body>
