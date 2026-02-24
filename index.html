@@ -96,7 +96,6 @@
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
 <script>
-    // আপনার কনফিগ একই থাকবে
     const firebaseConfig = { 
         apiKey: "AIzaSyCO7VEV5kJCQT11Cn0RYvgyBh8JypFVRgs", 
         databaseURL: "https://fojik-video-default-rtdb.firebaseio.com", 
@@ -110,65 +109,82 @@
     tg.expand();
 
     async function initApp() {
-    tg.ready();
-    const today = new Date().toDateString();
-    
-    // ১. রেফার আইডি পাওয়ার জন্য ৩ স্তরের চেক
-    let startParam = tg.initDataUnsafe?.start_param;
-    if (!startParam) {
-        const urlParams = new URLSearchParams(window.location.search);
-        startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
-    }
+        const today = new Date().toDateString();
+        let uId = "";
+        let startParam = "";
 
-    // স্ক্রিনে মেসেজ দেখাবে আইডি পেয়েছে কি না (টেস্ট করার জন্য)
-    if (startParam) {
-        tg.showAlert("রেফার আইডি ধরা পড়েছে: " + startParam);
-    } else {
-        tg.showAlert("কোনো রেফার আইডি পাওয়া যায়নি!");
-    }
-
-    const uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-    if (!uId) return;
-
-    const uRef = db.ref('users/' + uId);
-    const snapshot = await uRef.once('value');
-
-    if (!snapshot.exists()) {
-        await uRef.set({
-            balance: 0,
-            referrals: 0,
-            referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
-        });
-
-        if (startParam && String(startParam) !== uId) {
-            const inviterRef = db.ref('users/' + startParam);
-            inviterRef.transaction((d) => {
-                if (d) {
-                    d.balance = (Number(d.balance) || 0) + 40;
-                    d.referrals = (Number(d.referrals) || 0) + 1;
-                }
-                return d;
-            });
+        // ১. আইডি এবং রেফার প্যারামিটার পাওয়ার জন্য ৫ সেকেন্ডের ওয়েট লুপ
+        // এটিই আপনার সমস্যার আসল সমাধান
+        for (let i = 0; i < 10; i++) {
+            uId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "";
+            startParam = tg.initDataUnsafe?.start_param || "";
+            
+            // যদি টেলিগ্রাম মিস করে তবে URL থেকে খোঁজা
+            if (!startParam) {
+                const urlParams = new URLSearchParams(window.location.search);
+                startParam = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || "";
+            }
+            
+            if (uId) break; 
+            await new Promise(r => setTimeout(r, 500));
         }
-    }
-    }
 
-        // ৬. রিয়েল টাইম ডাটা শো করা
+        if (!uId) return; // আইডি না থাকলে কোড এখানেই থেমে যাবে
+
+        const uRef = db.ref('users/' + uId);
+        const snapshot = await uRef.once('value');
+
+        // ২. নতুন ইউজার হলে রেফারেল চেক
+        if (!snapshot.exists()) {
+            const newUser = {
+                balance: 0,
+                referrals: 0,
+                adsWatched: 0,
+                last_reset_day: today,
+                referredBy: (startParam && String(startParam) !== uId) ? String(startParam) : "none"
+            };
+            await uRef.set(newUser);
+
+            // ৩. রেফারারকে বোনাস দেওয়া
+            if (startParam && String(startParam) !== uId && startParam !== "none") {
+                const inviterRef = db.ref('users/' + startParam);
+                await inviterRef.transaction((currentData) => {
+                    if (currentData) {
+                        currentData.balance = (Number(currentData.balance) || 0) + 40;
+                        currentData.referrals = (Number(currentData.referrals) || 0) + 1;
+                    }
+                    return currentData;
+                });
+            }
+        }
+
+        // ৪. UI আপডেট (ব্যালেন্স, নাম এবং লিঙ্ক)
         uRef.on('value', (s) => {
             const d = s.val() || {};
             document.getElementById('u-balance').innerText = (Number(d.balance) || 0).toFixed(2);
             document.getElementById('u-ref').innerText = d.referrals || 0;
+            document.getElementById('u-ads').innerText = (d.adsWatched || 0) + " / 10";
             document.getElementById('u-name').innerText = tg.initDataUnsafe?.user?.first_name || "User";
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot/app?startapp=${uId}`;
         });
     }
 
-    // পেজ পরিবর্তনের জন্য ফাংশন
+    // ৫. পেজ পরিবর্তন ফাংশন
     function nav(id, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
         document.getElementById(id).classList.add('active-page');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
+    }
+
+    // ৬. কপি ফাংশন
+    function copyRef() {
+        const link = document.getElementById('ref-url').innerText;
+        const el = document.createElement('textarea');
+        el.value = link; document.body.appendChild(el);
+        el.select(); document.execCommand('copy');
+        document.body.removeChild(el);
+        tg.showAlert("লিঙ্ক কপি হয়েছে!");
     }
 
     initApp();
