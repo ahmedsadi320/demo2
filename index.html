@@ -9,7 +9,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* আপনার দেওয়া হুবহু ডিজাইন CSS */
+        /* আপনার আগের সব হুবহু CSS */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: white; padding-bottom: 90px; }
         .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
@@ -85,7 +85,15 @@
 
     <div id="tasks" class="page">
         <h2 style="margin-bottom:15px;">Complete Tasks</h2>
+        
         <div id="ad-list"></div>
+
+        <div class="card">
+            <div style="background:#007bff; width:50px; height:50px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center;">✈️</div>
+            <h3>𝗝𝗼𝗶𝗻 𝗼𝘂𝗿 𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺 𝗖𝗵𝗮𝗻𝗻𝗲𝗹</h3>
+            <p style="font-size: 12px; color: #ccc; margin-bottom: 10px;">চ্যানেলে জয়েন করার জন্য ৩০ টাকা বোনাস পান।</p>
+            <button id="join-btn" onclick="handleTask('join_channel', 'https://t.me/fojik_earn', 30)" class="btn-blue">Join & Claim</button>
+        </div>
     </div>
 
     <div id="withdraw" class="page">
@@ -115,52 +123,63 @@
         const user = tg.initDataUnsafe?.user;
         const uId = user?.id ? String(user.id) : "guest_user";
         
-        // আপনার Render Python App লিঙ্ক এখানে বসাবেন
-        const API_URL = "https://your-app.onrender.com"; 
+        // আপনার Render Python App URL (নিচের লিঙ্কে আপনার রেন্ডার লিঙ্ক বসান)
+        const SERVER_URL = "https://your-app.onrender.com"; 
 
-        async function loadData() {
+        async function initApp() {
             const startParam = tg.initDataUnsafe?.start_param || "";
             try {
-                const res = await fetch(`${API_URL}/user?uid=${uId}&ref=${startParam}`);
+                const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
                 const d = await res.json();
-                
-                document.getElementById('u-balance').innerText = d.balance.toFixed(2);
-                document.getElementById('u-ref').innerText = d.referrals;
-                document.getElementById('u-ads').innerText = d.ads_watched + " / 10";
-                document.getElementById('u-name').innerText = user?.first_name || "User";
-                document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
-                if(user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
-                
-                renderAds(d.completed_today);
-            } catch(e) { console.log("Error loading data"); }
+                updateUI(d);
+            } catch(e) { console.log("Server Error"); }
         }
 
-        function renderAds(doneList) {
+        function updateUI(d) {
+            document.getElementById('u-balance').innerText = d.balance.toFixed(2);
+            document.getElementById('u-ref').innerText = d.referrals;
+            document.getElementById('u-ads').innerText = d.ads_watched + " / 10";
+            document.getElementById('u-name').innerText = user?.first_name || "User";
+            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
+            if(user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
+            
+            // অ্যাড বক্স রেন্ডার
             const list = document.getElementById('ad-list');
             list.innerHTML = "";
             for(let i=1; i<=9; i++) {
-                const isDone = doneList.includes(`ad-${i}`);
+                const isDone = d.completed_today.includes(`ad-${i}`);
                 list.innerHTML += `
                 <div class="ad-card">
                     <i class="ad-icon">📹</i>
-                    <div class="ad-title">Ad #${i}</div>
-                    <button onclick="watchAd('ad-${i}')" class="btn-verify" ${isDone ? 'disabled style="background:gray"' : ''}>
+                    <div class="ad-title">Rewarded Ad #${i}</div>
+                    <button onclick="handleTask('ad-${i}', 'https://google.com', 10)" class="btn-verify" ${isDone ? 'disabled style="background:gray"' : ''}>
                         ${isDone ? 'Done ✅' : 'Verify'}
                     </button>
                 </div>`;
             }
+            
+            // চ্যানেল জয়েন বাটন চেক
+            if(d.completed_today.includes('join_channel')) {
+                const btn = document.getElementById('join-btn');
+                btn.innerText = "Claimed ✅";
+                btn.disabled = true;
+                btn.style.background = "gray";
+            }
         }
 
-        async function watchAd(id) {
-            window.open("https://google.com", "_blank"); 
+        async function handleTask(id, link, amount) {
+            window.open(link, "_blank");
             tg.showAlert("১৫ সেকেন্ড অপেক্ষা করুন...");
             setTimeout(async () => {
-                await fetch(`${API_URL}/add_money`, {
+                const res = await fetch(`${SERVER_URL}/api/add_money`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({uid: uId, task: id, amount: 10})
+                    body: JSON.stringify({uid: uId, task: id, amount: amount})
                 });
-                loadData();
+                if(res.ok) {
+                    tg.showAlert("বোনাস যোগ হয়েছে!");
+                    initApp();
+                }
             }, 15000);
         }
 
@@ -177,7 +196,7 @@
             tg.showAlert("Link copied!");
         }
 
-        loadData();
+        initApp();
     </script>
 </body>
 </html>
