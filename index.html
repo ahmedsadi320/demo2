@@ -155,7 +155,7 @@
         async function initApp() {
     // ১. সার্ভারে যাওয়ার আগেই নাম এবং রেফার লিঙ্ক সেট করে দিন
     document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
-    document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
+    document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
 
     const startParam = tg.initDataUnsafe?.start_param || "";
     try {
