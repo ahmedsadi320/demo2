@@ -5,7 +5,6 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* আপনার দেওয়া হুবহু CSS - কোনো পরিবর্তন নেই */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: white; padding-bottom: 90px; }
         .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
@@ -26,13 +25,11 @@
         .btn-blue { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-green { background: #28a745; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         
-        /* Ad Box Styling */
         .ad-card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
         .ad-icon { font-size: 50px; color: #3b82f6; margin-bottom: 10px; display: block; }
         .ad-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #ffffff; }
         .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
 
-        /* Withdraw Input Group - EXACTLY AS YOU GAVE */
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #e0e0e0; }
         .input-group label i { color: #3b82f6; margin-right: 5px; }
@@ -40,7 +37,6 @@
         .w-input:focus { border-color: #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
         .btn-withdraw { background: linear-gradient(90deg, #f80759 0%, #bc4e9c 100%); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
 
-        /* Support Grid */
         .supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .supp-card { background: #1c2128; border: 1px solid #30363d; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; }
         .supp-card i { font-size: 24px; color: #3b82f6; display: block; margin-bottom: 8px; font-style: normal; }
@@ -69,7 +65,7 @@
         </div>
         <div class="card">
             <h3>𝐑𝐞𝐟𝐞𝐫 & 𝐄𝐚𝐫𝐧 𝐌𝐨𝐫𝐞!</h3>
-            <p>প্রতি রেফারে আয় ৪০ টাকা। আপনার লিঙ্ক:</p>
+            <p>প্রতি রেফারের আয় ৪০ টাকা। আপনার লিঙ্ক:</p>
             <div id="ref-url" style="background:#0d1117; padding:12px; border-radius:10px; border:1px dashed #30363d; font-size:10px; color:#58a6ff; margin:15px 0; word-break:break-all;">Loading Link...</div>
             <div style="display:flex; gap:10px;">
                 <button onclick="copyRef()" class="btn-blue">Copy Link</button>
@@ -149,25 +145,26 @@
         const user = tg.initDataUnsafe?.user;
         const uId = user?.id ? String(user.id) : "guest_user";
         
-        // **আপনার Render Python App URL এখানে দিন**
         const SERVER_URL = "https://mini-app3.onrender.com"; 
 
         async function initApp() {
-            const startParam = tg.initDataUnsafe?.start_param || ""; // রেফারেল আইডি ধরলাম
+            // ১. টেলিগ্রাম থেকে আসা রেফারেল আইডি ধরা
+            const startParam = tg.initDataUnsafe?.start_param || ""; 
             
-            // নাম সেট করা
+            // ২. স্ক্রিনে নাম দেখানো
             document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
             
-            // রেফার লিঙ্ক সেট করা (অবশ্যই start ব্যবহার করতে হবে)
+            // ৩. সঠিক রেফার লিঙ্ক জেনারেট করা (start ব্যবহার করে)
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
 
             try {
-                // সার্ভারে রিকোয়েস্ট পাঠানো (সঠিক প্যারামিটার সহ)
+                // ৪. সার্ভারে ডাটা পাঠানো
                 const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
                 const data = await res.json();
                 updateUI(data);
             } catch(e) { 
                 console.log("Server error");
+                renderAdBoxes([]); 
             }
         }
 
@@ -175,17 +172,7 @@
             document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
             document.getElementById('u-ref').innerText = d.referrals || 0;
             document.getElementById('u-ads').innerText = (d.ads_watched || 0) + " / 10";
-            // নিচের লাইনেও startapp এর বদলে start করে দিলাম
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
-            renderAdBoxes(d.completed_today || []);
-        }
-
-        function updateUI(d) {
-            document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-            document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.ads_watched || 0) + " / 10";
-            document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
-            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
             renderAdBoxes(d.completed_today || []);
         }
 
