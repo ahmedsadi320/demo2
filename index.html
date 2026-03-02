@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://mini-app2-pi.vercel.app/">
-    <meta property="og:title" content="Fojik Earn Bot">
-    <meta property="og:description" content="প্রতি রেফারে ৪০ টাকা আয় করুন! শুধু বিজ্ঞাপন দেখে প্রতিদিন পেমেন্ট নিন।">
-    <meta property="og:image" content="https://i.ibb.co/DDJw0SVY/17481.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* আপনার দেওয়া হুবহু CSS স্টাইল */
+        /* আপনার হুবহু ডিজাইন CSS */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0d1117; color: white; padding-bottom: 90px; }
         .page { display: none; padding: 20px; animation: fadeIn 0.3s; }
@@ -29,21 +26,23 @@
         .card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 25px; margin-bottom: 20px; text-align: center; }
         .btn-blue { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-green { background: #28a745; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
-        .btn-withdraw { background: linear-gradient(90deg, #f80759 0%, #bc4e9c 100%); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
-
-        /* অ্যাড কার্ডের বিশেষ ডিজাইন */
+        
+        /* অ্যাড কার্ড ডিজাইন */
         .ad-card { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
-        .ad-icon { font-size: 50px; color: #3b82f6; margin-bottom: 10px; display: block; }
-        .ad-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #ffffff; }
-        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        .ad-icon { font-size: 45px; color: #3b82f6; margin-bottom: 10px; display: block; font-style: normal; }
+        .ad-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #ffffff; }
+        .btn-verify { background: #007bff; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
 
-        /* Withdraw Input Styling */
-        .input-group { margin-bottom: 15px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #e0e0e0; }
-        .input-group label i { color: #3b82f6; margin-right: 5px; }
-        .w-input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 14px; color: white; outline: none; font-size: 14px; transition: 0.3s; }
-        .w-input:focus { border-color: #3b82f6; box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+        /* সাপোর্ট গ্রিড */
+        .supp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .supp-card { background: #1c2128; border: 1px solid #30363d; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; }
+        .supp-card i { font-size: 24px; color: #3b82f6; display: block; margin-bottom: 8px; font-style: normal; }
 
+        /* উইথড্র ডিজাইন */
+        .w-input { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; padding: 14px; color: white; outline: none; margin-bottom: 15px; }
+        .btn-withdraw { background: linear-gradient(90deg, #f80759 0%, #bc4e9c 100%); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: bold; width: 100%; font-size: 16px; cursor: pointer; }
+
+        /* নব বার */
         .nav-bar { position: fixed; bottom: 0; width: 100%; background: #161b22; border-top: 1px solid #30363d; display: flex; justify-content: space-around; padding: 12px 0; z-index: 100; }
         .nav-item { color: #8b949e; text-align: center; font-size: 11px; flex: 1; border: none; background: none; cursor: pointer; }
         .nav-item i { display: block; font-size: 22px; margin-bottom: 4px; font-style: normal; }
@@ -77,9 +76,28 @@
         </div>
     </div>
 
+    <div id="support" class="page">
+        <h2 style="margin-bottom:15px;">🎧 Support</h2>
+        <div class="card" style="background: linear-gradient(145deg, #1c2128, #0d1117);">
+            <div style="font-size: 40px; margin-bottom: 10px;">▶️</div>
+            <h3>𝐓𝐮𝐭𝐨𝐫𝐢𝐚𝐥 𝐕𝐢𝐝𝐞𝐨</h3>
+            <p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">কিভাবে অ্যাপটি ব্যবহার করবেন—টিউটোরিয়াল দেখে নিন।</p>
+            <button onclick="window.open('https://t.me/fojik_earn/17')" class="btn-blue" style="background: #2575fc;">𝗢𝗽𝗲𝗻 𝗧𝘂𝘁𝗼𝗿𝗶𝗮𝗹</button>
+        </div>
+        <div class="supp-grid">
+            <div class="supp-card" onclick="window.open('https://t.me/fojiksupport')"><i>✈️</i><span>𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺</span></div>
+            <div class="supp-card" onclick="window.open('mailto:fojikapp@gmail.com')"><i>📧</i><span>ইমেইল</span></div>
+            <div class="supp-card" onclick="window.open('https://t.me/fojiklive_chat')"><i>💬</i><span>𝗟𝗶𝘃𝗲 𝗖𝗵𝗮𝘁</span></div>
+            <div class="supp-card" onclick="window.open('https://omg10.com/4/10588503')"><i>❓</i><span>FAQ</span></div>
+        </div>
+    </div>
+
     <div id="tasks" class="page">
         <h2 style="margin-bottom:15px;">Complete Tasks</h2>
-        <div id="ad-list"></div> <div class="card">
+        
+        <div id="ad-list"></div>
+
+        <div class="card">
             <div style="background:#007bff; width:50px; height:50px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center;">✈️</div>
             <h3>𝗝𝗼𝗶𝗻 𝗼𝘂𝗿 𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺 𝗖𝗵𝗮𝗻𝗻𝗲𝗹</h3>
             <p style="font-size: 12px; color: #ccc; margin-bottom: 10px;">চ্যানেলে জয়েন করার জন্য ৩০ টাকা বোনাস পান।</p>
@@ -90,36 +108,22 @@
     <div id="withdraw" class="page">
         <h2 style="margin-bottom:15px;">💰 Withdraw</h2>
         <div class="card" style="text-align: left;">
-            <div style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <p style="font-size: 13px; color: #3b82f6; font-weight:bold;">Minimum Withdraw: 800.00 TAKA</p>
-                <p style="font-size: 11px; color: #f80759; margin-top: 5px;">আমরা শুধু পারসোনাল নাম্বারে পেমেন্ট করি!</p>
-            </div>
-
-            <div class="input-group">
-                <label><i class="fas fa-credit-card"></i> 𝗦𝗲𝗹𝗲𝗰𝘁 𝗮𝗻𝘆 𝗺𝗲𝘁𝗵𝗼𝗱:</label>
-                <select id="w-method" class="w-input">
-                    <option value="">Select method:</option>
-                    <option value="BKash">𝗕𝗞𝗮𝘀𝗵</option>
-                    <option value="Nagad">𝗡𝗮𝗴𝗮𝗱</option>
-                </select>
-            </div>
-
-            <div class="input-group">
-                <label><i class="fas fa-address-card"></i> 𝗔𝗰𝗰𝗼𝘂𝗻𝘁 𝗡𝘂𝗺𝗯𝗲𝗿:</label>
-                <input type="text" id="w-number" class="w-input" placeholder="01XXXXXXXXX">
-            </div>
-
-            <div class="input-group">
-                <label><i class="fas fa-money-bill-wave"></i> 𝗦𝗲𝗹𝗲𝗰𝘁 𝗔𝗺𝗼𝘂𝗻𝘁:</label>
-                <input type="number" id="w-amount" class="w-input" placeholder="(Min 800)">
-            </div>
-
-            <button onclick="submitWithdraw()" class="btn-withdraw">🚀 𝗦𝘂𝗯𝗺𝗶𝘁 𝗪𝗶𝘁𝗵𝗱𝗿𝗮𝘄 𝗥𝗲𝗾𝘂𝗲𝘀𝘁</button>
+            <p style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">Select Method:</p>
+            <select id="w-method" class="w-input">
+                <option value="BKash">BKash</option>
+                <option value="Nagad">Nagad</option>
+            </select>
+            <p style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">Account Number:</p>
+            <input type="text" id="w-number" class="w-input" placeholder="01XXXXXXXXX">
+            <p style="margin-bottom: 10px; font-size: 14px; color: #3b82f6;">Amount (Min 800):</p>
+            <input type="number" id="w-amount" class="w-input" placeholder="800">
+            <button onclick="submitWithdraw()" class="btn-withdraw">🚀 Submit Request</button>
         </div>
     </div>
 
     <nav class="nav-bar">
         <button class="nav-item active" onclick="nav('home', this)"><i>🏠</i>Home</button>
+        <button class="nav-item" onclick="nav('support', this)"><i>🎧</i>Support</button>
         <button class="nav-item" onclick="nav('tasks', this)"><i>📋</i>Tasks</button>
         <button class="nav-item" onclick="nav('withdraw', this)"><i>💰</i>Withdraw</button>
     </nav>
@@ -130,16 +134,20 @@
         const user = tg.initDataUnsafe?.user;
         const uId = user?.id ? String(user.id) : "guest_user";
         
-        // আপনার রেন্ডার সার্ভারের লিঙ্ক (বসালে ডাটা সেভ হবে)
+        // এখানে আপনার Render/Python সার্ভারের লিঙ্ক দিন
         const SERVER_URL = "https://your-app.onrender.com"; 
 
         async function initApp() {
             const startParam = tg.initDataUnsafe?.start_param || "";
             try {
                 const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
-                const d = await res.json();
-                updateUI(d);
-            } catch(e) { console.log("Server error"); }
+                const data = await res.json();
+                updateUI(data);
+            } catch(e) { 
+                console.log("Error loading user data");
+                // যদি সার্ভার কানেক্ট না হয় তাও ৯টি বক্স দেখাবে (অফলাইন মোড)
+                renderAdBoxes([]); 
+            }
         }
 
         function updateUI(d) {
@@ -148,39 +156,47 @@
             document.getElementById('u-ads').innerText = (d.ads_watched || 0) + " / 10";
             document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
+            if(user?.photo_url) document.getElementById('user-photo').src = user.photo_url;
             
-            // ৯টি অ্যাড বক্স রেন্ডার (হুবহু আগের ডিজাইন)
-            const list = document.getElementById('ad-list');
-            list.innerHTML = "";
+            renderAdBoxes(d.completed_today || []);
+
+            if((d.completed_today || []).includes('join_channel')) {
+                const btn = document.getElementById('join-btn');
+                btn.innerText = "Claimed ✅"; btn.disabled = true; btn.style.background = "gray";
+            }
+        }
+
+        function renderAdBoxes(doneList) {
+            const adList = document.getElementById('ad-list');
+            adList.innerHTML = "";
             for(let i=1; i<=9; i++) {
-                const isDone = (d.completed_today || []).includes(`ad-${i}`);
-                list.innerHTML += `
+                const id = `ad-${i}`;
+                const isDone = doneList.includes(id);
+                adList.innerHTML += `
                 <div class="ad-card">
                     <i class="ad-icon">📹</i>
-                    <div class="ad-title">𝗥𝗲𝘄𝗮𝗿𝗱𝗲𝗱 𝗔𝗱 #${i}</div>
-                    <p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">প্রতিটি বিজ্ঞাপনের জন্য ১০ টাকা আয় করুন।</p>
-                    <button onclick="handleTask('ad-${i}', 'https://google.com', 10)" class="btn-verify" ${isDone ? 'disabled style="background:gray"' : ''}>
+                    <div class="ad-title">Rewarded Ad #${i}</div>
+                    <p style="font-size:12px; color:#aaa; margin-bottom:10px;">প্রতি বিজ্ঞাপনে ১০ টাকা আয় করুন।</p>
+                    <button id="btn-${id}" onclick="handleTask('${id}', 'https://google.com', 10)" class="btn-verify" ${isDone ? 'disabled style="background:gray"' : ''}>
                         ${isDone ? 'Claimed ✅' : 'Verify'}
                     </button>
                 </div>`;
-            }
-
-            if((d.completed_today || []).includes('join_channel')) {
-                const b = document.getElementById('join-btn');
-                b.innerText = "Claimed ✅"; b.style.background = "gray"; b.disabled = true;
             }
         }
 
         async function handleTask(id, link, amount) {
             window.open(link, "_blank");
-            tg.showAlert("১৫ সেকেন্ড অপেক্ষা করুন...");
+            tg.showAlert("১৫ সেকেন্ড বিজ্ঞাপনে থাকুন...");
             setTimeout(async () => {
-                await fetch(`${SERVER_URL}/api/add_money`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({uid: uId, task: id, amount: amount})
-                });
-                initApp();
+                try {
+                    await fetch(`${SERVER_URL}/api/add_money`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({uid: uId, task: id, amount: amount})
+                    });
+                    tg.showAlert("অভিনন্দন! ১০ টাকা যোগ হয়েছে।");
+                    initApp();
+                } catch(e) { tg.showAlert("টাকা যোগ করতে সমস্যা হয়েছে।"); }
             }, 15000);
         }
 
