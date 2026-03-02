@@ -153,19 +153,31 @@
         const SERVER_URL = "https://mini-app3.onrender.com"; 
 
         async function initApp() {
-    // ১. সার্ভারে যাওয়ার আগেই নাম এবং রেফার লিঙ্ক সেট করে দিন
-    document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
-    document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
+            const startParam = tg.initDataUnsafe?.start_param || ""; // রেফারেল আইডি ধরলাম
+            
+            // নাম সেট করা
+            document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
+            
+            // রেফার লিঙ্ক সেট করা (অবশ্যই start ব্যবহার করতে হবে)
+            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
 
-    const startParam = tg.initDataUnsafe?.start_param || "";
-    try {
-        const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
-        const data = await res.json();
-        updateUI(data);
-    } catch(e) { 
-        console.log("Server error, but UI name is set.");
-        renderAdBoxes([]); 
-    }
+            try {
+                // সার্ভারে রিকোয়েস্ট পাঠানো (সঠিক প্যারামিটার সহ)
+                const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
+                const data = await res.json();
+                updateUI(data);
+            } catch(e) { 
+                console.log("Server error");
+            }
+        }
+
+        function updateUI(d) {
+            document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
+            document.getElementById('u-ref').innerText = d.referrals || 0;
+            document.getElementById('u-ads').innerText = (d.ads_watched || 0) + " / 10";
+            // নিচের লাইনেও startapp এর বদলে start করে দিলাম
+            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
+            renderAdBoxes(d.completed_today || []);
         }
 
         function updateUI(d) {
