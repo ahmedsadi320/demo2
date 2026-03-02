@@ -153,12 +153,19 @@
         const SERVER_URL = "https://mini-app3.onrender.com"; 
 
         async function initApp() {
-            const startParam = tg.initDataUnsafe?.start_param || "";
-            try {
-                const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
-                const data = await res.json();
-                updateUI(data);
-            } catch(e) { renderAdBoxes([]); } // সার্ভার অফ থাকলেও বক্স দেখাবে
+    // ১. সার্ভারে যাওয়ার আগেই নাম এবং রেফার লিঙ্ক সেট করে দিন
+    document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
+    document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?startapp=${uId}`;
+
+    const startParam = tg.initDataUnsafe?.start_param || "";
+    try {
+        const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
+        const data = await res.json();
+        updateUI(data);
+    } catch(e) { 
+        console.log("Server error, but UI name is set.");
+        renderAdBoxes([]); 
+    }
         }
 
         function updateUI(d) {
