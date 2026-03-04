@@ -148,24 +148,20 @@
         const SERVER_URL = "https://mini-app3.onrender.com"; 
 
         async function initApp() {
-            // ১. টেলিগ্রাম থেকে আসা রেফারেল আইডি ধরা
-            const startParam = tg.initDataUnsafe?.start_param || ""; 
-            
-            // ২. স্ক্রিনে নাম দেখানো
-            document.getElementById('u-name').innerHTML = (user ? user.first_name : "User") + ' <span style="color:#3b82f6">✔️</span>';
-            
-            // ৩. সঠিক রেফার লিঙ্ক জেনারেট করা (start ব্যবহার করে)
-            document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
+    // টেলিগ্রামকে ডাটা দেওয়ার জন্য ১ সেকেন্ড সময় দিন
+    setTimeout(async () => {
+        const startParam = tg.initDataUnsafe?.start_param || ""; 
+        const telegramUser = tg.initDataUnsafe?.user;
+        
+        // যদি আইডি না পায় তবেই শুধু guest_user হবে
+        const finalUid = telegramUser?.id ? String(telegramUser.id) : "guest_user";
 
-            try {
-                // ৪. সার্ভারে ডাটা পাঠানো
-                const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
-                const data = await res.json();
-                updateUI(data);
-            } catch(e) { 
-                console.log("Server error");
-                renderAdBoxes([]); 
-            }
+        if (finalUid !== "guest_user") {
+            const res = await fetch(`${SERVER_URL}/api/user?uid=${finalUid}&ref=${startParam}`);
+            const data = await res.json();
+            updateUI(data, finalUid);
+        }
+    }, 1000); 
         }
 
         function updateUI(d) {
