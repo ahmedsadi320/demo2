@@ -141,36 +141,51 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        const user = tg.initDataUnsafe?.user;
-        const uId = user?.id ? String(user.id) : "guest_user";
         
+        // অ্যাপ লোড হওয়ার সাথে সাথে টেলিগ্রামকে রেডি হতে বলুন
+        tg.ready();
+        tg.expand();
+
         const SERVER_URL = "https://mini-app3.onrender.com"; 
 
         async function initApp() {
-    // টেলিগ্রামকে ডাটা দেওয়ার জন্য ১ সেকেন্ড সময় দিন
-    setTimeout(async () => {
-        const startParam = tg.initDataUnsafe?.start_param || ""; 
-        const telegramUser = tg.initDataUnsafe?.user;
-        
-        // যদি আইডি না পায় তবেই শুধু guest_user হবে
-        const finalUid = telegramUser?.id ? String(telegramUser.id) : "guest_user";
+            // টেলিগ্রামের ডাটাগুলো সঠিকভাবে ধরার জন্য এই অংশটি ব্যবহার করুন
+            const user = tg.initDataUnsafe?.user;
+            const startParam = tg.initDataUnsafe?.start_param || "";
+            
+            // যদি টেলিগ্রাম আইডি না পায়, তবে ১ সেকেন্ড পর আবার চেষ্টা করবে
+            if (!user) {
+                console.log("Waiting for Telegram data...");
+                setTimeout(initApp, 1000);
+                return;
+            }
 
-        if (finalUid !== "guest_user") {
-            const res = await fetch(`${SERVER_URL}/api/user?uid=${finalUid}&ref=${startParam}`);
-            const data = await res.json();
-            updateUI(data, finalUid);
-        }
-    }, 1000); 
-        }
+            const uId = String(user.id);
+            const firstName = user.first_name || "User";
 
-        function updateUI(d) {
-            document.getElementById('u-balance').innerText = (d.balance || 0).toFixed(2);
-            document.getElementById('u-ref').innerText = d.referrals || 0;
-            document.getElementById('u-ads').innerText = (d.ads_watched || 0) + " / 10";
+            // ১. স্ক্রিনে ইউজারের আসল নাম সেট করা
+            document.getElementById('u-name').innerHTML = `${firstName} <span style="color:#3b82f6">✔️</span>`;
+            
+            // ২. রেফার লিঙ্ক সেট করা
             document.getElementById('ref-url').innerText = `https://t.me/fojikvideo_bot?start=${uId}`;
-            renderAdBoxes(d.completed_today || []);
+
+            try {
+                // ৩. সার্ভারে আসল আইডি এবং রেফারেল আইডি পাঠানো
+                const res = await fetch(`${SERVER_URL}/api/user?uid=${uId}&ref=${startParam}`);
+                const data = await res.json();
+                
+                // ৪. ব্যালেন্স ও অন্যান্য তথ্য আপডেট করা
+                document.getElementById('u-balance').innerText = (data.balance || 0).toFixed(2);
+                document.getElementById('u-ref').innerText = data.referrals || 0;
+                document.getElementById('u-ads').innerText = (data.ads_watched || 0) + " / 10";
+                renderAdBoxes(data.completed_today || []);
+            } catch(e) { 
+                console.log("Server error:", e);
+            }
         }
+
+        // অ্যাপ শুরু করুন
+        initApp();
 
         function renderAdBoxes(doneList) {
             const list = document.getElementById('ad-list');
